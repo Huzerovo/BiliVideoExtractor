@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CODE_RED="\033[31m"
-CODE_WARN="\033[32m"
+CODE_WARN="\033[33m"
 CODE_NORMAL="\033[0m"
 PYTHON_BILI_TITLE="$(dirname "$(realpath "$0")")/bili_video_title.py"
 DELETE_AFTER_EXTRACT="false"
@@ -18,15 +18,15 @@ delete() {
 }
 
 warn () {
-    printf "$CODE_WARN%s$CODE_NORMAL\n" "$*"
+    printf "${CODE_WARN}warn: %s${CODE_NORMAL}\n" "$*"
 }
 
 error() {
-    printf "$CODE_RED%s$CODE_NORMAL\n" "$*"
+    printf "${CODE_RED}error: %s${CODE_NORMAL}\n" "$*"
 }
 
 die () {
-    printf "$CODE_RED%s$CODE_NORMAL\n" "$*"
+    printf "${CODE_RED}exited with error: %s${CODE_NORMAL}\n" "$*"
     exit 1
 }
 
@@ -113,7 +113,7 @@ for video_dir in "$VIDEO_DIR"/*; do
         video_file_base="$(python3 "$PYTHON_BILI_TITLE" -c "$part_dir" 2> /dev/null)"
         if [[ -z "$video_file_base" ]]; then
             python3 "$PYTHON_BILI_TITLE" -c "$part_dir"
-            warn "失败：无法获取音视频所在文件夹 $part_dir"
+            error "失败，无法获取音视频所在文件夹 $part_dir"
             continue
         fi
 
@@ -130,8 +130,10 @@ for video_dir in "$VIDEO_DIR"/*; do
         output_file="$OUTPUT_DIR/$(python3 "$PYTHON_BILI_TITLE" "$part_dir")"
         output_dir="$(dirname "$output_file")"
         if [[ ! -d "$output_dir" ]]; then
-            warn "创建文件夹：$output_dir"
-            mkdir -p "$output_dir"
+            if [[ "$DRY_RUN" == "false" ]]; then
+                warn "创建文件夹：$output_dir"
+                mkdir -p "$output_dir"
+            fi
         fi
 
         if [[ -f "$blv_file" ]]; then
@@ -140,12 +142,18 @@ for video_dir in "$VIDEO_DIR"/*; do
             fi
         else
             if [[ ! -f "$audio" ]]; then
-                warn "失败：音频文件 $audio 不存在"
+                warn "音频文件 $audio 不存在，将忽略使用音频文件输入"
+                if [[ "$DRY_RUN" == "false" ]]; then
+                    ffmpeg -n -v quiet -i "$video" -codec copy -- "$output_file" || continue
+                fi
                 continue
             fi
 
             if [[ ! -f "$video" ]]; then
-                warn "失败：视频文件 $video 不存在"
+                warn "视频文件 $video 不存在，将忽略使用视频文件输入"
+                if [[ "$DRY_RUN" == "false" ]]; then
+                    ffmpeg -n -v quiet -i "$audio" -codec copy -- "$output_file" || continue
+                fi
                 continue
             fi
             if [[ "$DRY_RUN" == "false" ]]; then

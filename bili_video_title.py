@@ -84,6 +84,8 @@ def get_video_title(video_path: str) -> bool:
     with open(entry_file, encoding="UTF-8") as f:
         entry_json = json.load(f)
         title: str = entry_json["title"].replace("/", "_")
+        owner: str = entry_json["owner_name"].replace("/", "_")
+        owner_id: number = entry_json["owner_id"]
         sub_title = ""
 
         if "page_data" in entry_json:
@@ -94,13 +96,13 @@ def get_video_title(video_path: str) -> bool:
                 sub_title = "page " + str(page_data["page"])
 
             if title != sub_title:
-                title = title + "/" + sub_title
+                title = title + "/" + sub_title + "(" + owner + "_" + owner_id + ")"
 
         # FIXME: 重构ep部分
         elif "ep" in entry_json:
             ep = entry_json["ep"]
             sub_title = ep["index_title"].replace("/", "_")
-            title = title + "/" + sub_title
+            title = title + "/" + sub_title + "(" + owner + "_" + owner_id + ")"
 
         log_info(title + "[" + get_video_id(entry_json) + "]" + ".mp4")
         return True
